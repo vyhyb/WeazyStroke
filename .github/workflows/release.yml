@@ -23,7 +23,7 @@ jobs:
         if: matrix.format == 'deb'
         run: |
           apt-get update
-          apt-get install -y git build-essential cmake ninja-build pkg-config dpkg-dev \
+          apt-get install -y git build-essential cmake ninja-build pkg-config dpkg-dev file \
             libinput-dev libudev-dev libevdev-dev libxkbcommon-dev \
             libgtk-4-dev libadwaita-1-dev libgtk4-layer-shell-dev
 
