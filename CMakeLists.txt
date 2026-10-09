@@ -111,3 +111,21 @@ endif()
 install(TARGETS eswl-daemon eswl-overlay eswl-config eswl-tray DESTINATION bin/)
 install(FILES data/weazystroke.svg DESTINATION share/icons/hicolor/scalable/apps/)
 install(FILES data/weazystroke.desktop DESTINATION share/applications/)
+install(FILES packaging/99-easystroke-wayland.rules DESTINATION lib/udev/rules.d/)
+
+# Packaging: `cpack -G DEB` / `cpack -G RPM` from a Release (-DENABLE_ASAN=OFF) build.
+set(CPACK_PACKAGE_NAME weazystroke)
+set(CPACK_PACKAGE_VERSION 0.1.0)
+set(CPACK_PACKAGE_CONTACT "vyhyb <https://github.com/vyhyb/WeazyStroke>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Mouse and stylus gesture recognition for Wayland")
+set(CPACK_PACKAGING_INSTALL_PREFIX /usr)
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE ISC)
+# /usr/lib/udev/rules.d etc. are owned by systemd/filesystem; don't claim them.
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+    /usr/lib/udev /usr/lib/udev/rules.d /usr/share/applications
+    /usr/share/icons /usr/share/icons/hicolor
+    /usr/share/icons/hicolor/scalable /usr/share/icons/hicolor/scalable/apps)
+include(CPack)
