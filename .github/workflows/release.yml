@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: ${{ matrix.format }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { format: deb, arch: x86_64, runner: ubuntu-24.04 }
+          - { format: deb, arch: arm64, runner: ubuntu-24.04-arm }
+          - { format: rpm, arch: x86_64, runner: ubuntu-24.04, container: 'fedora:latest' }
+          - { format: rpm, arch: arm64, runner: ubuntu-24.04-arm, container: 'fedora:latest' }
+    steps:
+      - name: Install dependencies (deb)
+        if: matrix.format == 'deb'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config dpkg-dev \
+            libinput-dev libudev-dev libevdev-dev libxkbcommon-dev \
+            libgtk-4-dev libadwaita-1-dev libgtk4-layer-shell-dev
+
+      - name: Install dependencies (rpm)
+        if: matrix.format == 'rpm'
+        run: |
+          dnf install -y git cmake ninja-build gcc gcc-c++ pkgconf-pkg-config rpm-build \
+            libinput-devel systemd-devel libevdev-devel libxkbcommon-devel \
+            gtk4-devel libadwaita-devel gtk4-layer-shell-devel
+
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF
+          cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        working-directory: build
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            cpack -G "${FORMAT^^}" -D CPACK_PACKAGE_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            cpack -G "${FORMAT^^}"
+          fi
+        env:
+          FORMAT: ${{ matrix.format }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.format }}-${{ matrix.arch }}
+          path: build/*.${{ matrix.format }}
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
