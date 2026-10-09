@@ -213,4 +213,9 @@ void type_text(const Keymap &km, InputInjector &inj, const std::string &utf8) {
     }
 }
 
+void type_text_then_enter(const Keymap &km, InputInjector &inj, const std::string &utf8) {
+    type_text(km, inj, utf8);
+    inj.tap(KEY_ENTER);
+}
+
 } // namespace es

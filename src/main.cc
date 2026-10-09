@@ -204,13 +204,20 @@ void build_bindings(GestureRecognizer &recognizer, const GestureConfig &cfg, Inp
             else
                 std::fprintf(stderr, "warning: gesture '%s': cannot bind key '%s'\n", name.c_str(),
                              arg.c_str());
-        } else if (g.type == "text") {
+        } else if (g.type == "text" || g.type == "text + Enter") {
             std::string text = arg;
-            if (inj && keymap.ok())
-                action = [inj, &keymap, text] { type_text(keymap, *inj, text); };
-            else
+            if (inj && keymap.ok()) {
+                const bool press_enter_after = g.type == "text + Enter";
+                action = [inj, &keymap, text, press_enter_after] {
+                    if (press_enter_after)
+                        type_text_then_enter(keymap, *inj, text);
+                    else
+                        type_text(keymap, *inj, text);
+                };
+            } else {
                 std::fprintf(stderr, "warning: gesture '%s': cannot bind text action\n",
                              name.c_str());
+            }
         } else if (g.type == "button") {
             int n = std::atoi(arg.c_str());
             if (inj && n > 0) {

@@ -80,9 +80,9 @@ Triggers, the trail, colors, pressure, and touch are all tunable in
 
 ## Permissions
 
-The engine reads `/dev/input/event*` and read-writes `/dev/uinput`. The Arch
-package installs the udev rule; from source, install it and join the `input`
-group:
+The engine needs read-write access to `/dev/input/event*` (libinput) and
+`/dev/uinput` (action injection). The Arch package installs the udev rule; from
+source, install it and join the `input` group:
 
 ```sh
 sudo cp packaging/99-easystroke-wayland.rules /etc/udev/rules.d/
@@ -92,14 +92,12 @@ sudo usermod -aG input "$USER"        # then re-login
 
 ## GNOME
 
-The engine, GUI, and actions work on GNOME, but **not the live stroke trail**:
-Mutter doesn't implement `wlr-layer-shell`, and a normal Wayland window can't be
-a click-through, always-on-top overlay. Drawing the trail there would require a
-GNOME Shell extension that renders on the shell stage, fed by the daemon over
-DBus. The overlay already sits behind a swappable process + line-protocol
-interface (`TraceOverlay`), so such a DBus backend would slot in with no engine
-changes. Future / community contribution — not planned (per-app detection on
-GNOME would need the same extension).
+The engine, GUI, and actions work on GNOME, but Mutter does not implement
+`wlr-layer-shell`, so the daemon's live overlay cannot draw its trail there.
+The companion [WeazyStroke GNOME Tail extension](weazystroke-gnome-tail/README.md)
+draws the trail on the GNOME Shell stage instead. It reads the trigger from the
+WeazyStroke config and reports config detection in its preferences; install and
+enable it separately from the daemon.
 
 ## License
 

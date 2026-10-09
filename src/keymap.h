@@ -62,5 +62,6 @@ private:
 // Bridge Keymap output to the injector primitives.
 void send_keystroke(InputInjector &inj, const KeyStroke &ks);
 void type_text(const Keymap &km, InputInjector &inj, const std::string &utf8);
+void type_text_then_enter(const Keymap &km, InputInjector &inj, const std::string &utf8);
 
 } // namespace es

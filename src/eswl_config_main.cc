@@ -31,9 +31,9 @@ using namespace es;
 
 namespace {
 
-// Action types in dropdown order (easystroke's set). Index 0 = no action.
-const char *const kTypeNames[] = {"(none)", "command", "key",    "text",   "button",
-                                  "scroll", "ignore",  "misc",   nullptr};
+// Action types in dropdown order. Index 0 = no action.
+const char *const kTypeNames[] = {"(none)", "command", "key",    "text", "text + Enter",
+                                  "button", "scroll",  "ignore", "misc", nullptr};
 
 
 constexpr int kThumbW = 64;
@@ -95,6 +95,8 @@ const char *placeholder_for(const std::string &type) {
         return "key combo (e.g. ctrl+shift+t)";
     if (type == "text")
         return "text to type";
+    if (type == "text + Enter")
+        return "text to type, then press Enter";
     if (type == "button")
         return "button number";
     if (type == "scroll")
