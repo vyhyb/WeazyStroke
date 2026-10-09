@@ -14,16 +14,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { format: deb, arch: x86_64, runner: ubuntu-24.04 }
-          - { format: deb, arch: arm64, runner: ubuntu-24.04-arm }
+          - { format: deb, arch: x86_64, runner: ubuntu-24.04, container: 'debian:trixie' }
+          - { format: deb, arch: arm64, runner: ubuntu-24.04-arm, container: 'debian:trixie' }
           - { format: rpm, arch: x86_64, runner: ubuntu-24.04, container: 'fedora:latest' }
           - { format: rpm, arch: arm64, runner: ubuntu-24.04-arm, container: 'fedora:latest' }
     steps:
       - name: Install dependencies (deb)
         if: matrix.format == 'deb'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build pkg-config dpkg-dev \
+          apt-get update
+          apt-get install -y git build-essential cmake ninja-build pkg-config dpkg-dev \
             libinput-dev libudev-dev libevdev-dev libxkbcommon-dev \
             libgtk-4-dev libadwaita-1-dev libgtk4-layer-shell-dev
 
