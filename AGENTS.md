@@ -36,6 +36,8 @@ This is a personal fork (`vyhyb/WeazyStroke`) of `nine7nine/WeazyStroke`. Change
 - Keep diffs small and local. Avoid touching files that do not need to change.
 - Keep fork-specific changes (personal docs such as `WeazyStroke-Fedora.md`, local packaging tweaks) in separate commits from general improvements, so general ones can be cherry-picked.
 - Branch from the latest `upstream/master` for anything intended for a PR.
+- Develop each separate feature or fix on its own branch and merge it through a pull request. The release workflow builds its "What's Changed" notes from merged PRs, so direct commits to `master` would be missing from them.
+- Before tagging a release, update `RELEASE_NOTES.md` (the hand-written part of the release notes) to match the current state of the app.
 - Update docs (`README.md`, `docs/*.md`) in the same change as the behavior they describe.
 - Edit the `docs/*.md` sources, never the generated `docs/*.gen.html`. Regenerate them with `docs/md2html.sh` and `docs/postprocess-html.sh`, and run `docs/lint-md.sh` before committing.
 - Keep docs accurate: remove or fix text that no longer matches the code, and document new config options and action types where they are listed.
