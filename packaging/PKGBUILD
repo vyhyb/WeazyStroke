@@ -1,21 +1,20 @@
 # Maintainer: Jordan Johnston <johnstonljordan@gmail.com>
 
-# Builds straight from git. After you create the GitHub repo, set `url` and the
-# `source` URL below to it (and rename pkgname if you prefer a different name).
+# Builds straight from git (the vyhyb fork; its CMake install() also ships the udev rule).
 pkgname=weazystroke-git
 _pkgname=weazystroke
 pkgver=r1.0000000
 pkgrel=1
 pkgdesc="Mouse and stylus gesture recognition for Wayland (easystroke, reimagined)"
 arch=('x86_64')
-url="https://github.com/nine7nine/WeazyStroke"
+url="https://github.com/vyhyb/WeazyStroke"
 license=('ISC')
 depends=('libinput' 'libevdev' 'libxkbcommon' 'gtk4' 'gtk4-layer-shell' 'libadwaita'
          'glib2' 'systemd-libs')
 makedepends=('cmake' 'ninja' 'git')
 provides=('weazystroke')
 conflicts=('weazystroke')
-source=("$_pkgname::git+https://github.com/nine7nine/WeazyStroke.git")
+source=("$_pkgname::git+https://github.com/vyhyb/WeazyStroke.git")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -32,11 +31,6 @@ build() {
 }
 
 package() {
-  # Installs eswl-daemon/-overlay/-config/-tray to /usr/bin, the icon, and the
-  # .desktop launcher (see CMake install() rules).
+  # Installs the four eswl-* binaries, icon, .desktop launcher and udev rule.
   DESTDIR="$pkgdir" cmake --install build
-
-  # udev rule for /dev/uinput access (input injection) without running as root.
-  install -Dm644 "$srcdir/$_pkgname/packaging/99-easystroke-wayland.rules" \
-    "$pkgdir/usr/lib/udev/rules.d/99-easystroke-wayland.rules"
 }
