@@ -34,7 +34,7 @@ jobs:
             libinput-devel systemd-devel libevdev-devel libxkbcommon-devel \
             gtk4-devel libadwaita-devel gtk4-layer-shell-devel
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -56,7 +56,7 @@ jobs:
         env:
           FORMAT: ${{ matrix.format }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.format }}-${{ matrix.arch }}
           path: build/*.${{ matrix.format }}
@@ -68,12 +68,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
