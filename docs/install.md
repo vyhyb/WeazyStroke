@@ -164,7 +164,7 @@ If `/dev/uinput` is unavailable the daemon still runs — it just warns that inj
 
 There are two units, for two different roles — do not confuse them.
 
-**The autostart user service** is the one most people use. The GUI's "Start on login" toggle writes `~/.config/systemd/user/weazystroke.service`, whose `ExecStart` is the daemon with `--overlay --tray`, and enables it with `systemctl --user enable --now`. It runs in your graphical session, picks up your `input`-group membership, and brings up the engine, trail, and tray together. See [Config GUI & Tray](config-gui.gen.html).
+**The autostart user service** is the one most people use. The GUI's "Start on login" toggle writes `~/.config/systemd/user/weazystroke.service`, whose `ExecStart` is the daemon with `--tray` (plus `--overlay` if the overlay checkbox is on), and enables it with `systemctl --user enable --now`. It runs in your graphical session, picks up your `input`-group membership, and brings up the engine, tray, and optionally the trail. See [Config GUI & Tray](config-gui.gen.html).
 
 **The system service template** (`packaging/easystroke-wayland.service`) is a starting point for the future "small privileged daemon" model, where the engine has device capabilities and the GUI talks to it over IPC. It is hardened — `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `PrivateTmp`, and scoped `DeviceAllow` for `/dev/uinput` and `char-input` — and is provided as a reference, not wired up by the install.
 

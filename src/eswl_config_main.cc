@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -1121,21 +1122,38 @@ bool autostart_is_enabled() {
     g_free(out);
     return enabled;
 }
-void write_service_file() {
+// GNOME's compositor has no layer-shell, so the trail overlay cannot work there.
+bool on_gnome() {
+    const char *d = std::getenv("XDG_CURRENT_DESKTOP");
+    return d && std::strstr(d, "GNOME");
+}
+// The overlay choice lives in the unit's ExecStart; with no unit yet it defaults to on.
+bool overlay_is_enabled() {
+    if (on_gnome())
+        return false;
+    std::ifstream in(service_file_path());
+    if (!in)
+        return true;
+    std::stringstream ss;
+    ss << in.rdbuf();
+    return ss.str().find(" --overlay") != std::string::npos;
+}
+void write_service_file(bool overlay) {
     std::error_code ec;
     std::filesystem::create_directories(
         std::filesystem::path(service_file_path()).parent_path(), ec);
     std::ofstream o(service_file_path(), std::ios::trunc);
     o << "[Unit]\nDescription=WeazyStroke gesture daemon\n"
       << "PartOf=graphical-session.target\nAfter=graphical-session.target\n\n"
-      << "[Service]\nType=simple\nExecStart=" << daemon_exe_path() << " --overlay --tray\n"
+      << "[Service]\nType=simple\nExecStart=" << daemon_exe_path() << (overlay ? " --overlay" : "")
+      << " --tray\n"
       << "Restart=on-failure\nRestartSec=2\n\n"
       << "[Install]\nWantedBy=graphical-session.target\n";
 }
 void on_autostart_toggled(GtkCheckButton *cb, gpointer d) {
     State *s = static_cast<State *>(d);
     if (gtk_check_button_get_active(cb)) {
-        write_service_file();
+        write_service_file(overlay_is_enabled());
         g_spawn_command_line_async("systemctl --user daemon-reload", nullptr);
         g_spawn_command_line_async("systemctl --user enable --now weazystroke.service", nullptr);
         set_status(s, "Autostart enabled (systemd user service started).");
@@ -1143,6 +1161,14 @@ void on_autostart_toggled(GtkCheckButton *cb, gpointer d) {
         g_spawn_command_line_async("systemctl --user disable --now weazystroke.service", nullptr);
         set_status(s, "Autostart disabled.");
     }
+}
+void on_overlay_toggled(GtkCheckButton *cb, gpointer d) {
+    State *s = static_cast<State *>(d);
+    write_service_file(gtk_check_button_get_active(cb));
+    g_spawn_command_line_async(
+        "sh -c \"systemctl --user daemon-reload && systemctl --user try-restart weazystroke.service\"",
+        nullptr);
+    set_status(s, "Overlay setting saved (a running service restarts to apply it).");
 }
 
 // Human description of the configured trigger (single button or held chord).
@@ -1637,10 +1663,25 @@ GtkWidget *build_prefs_page(State *s) {
     gtk_box_append(GTK_BOX(page), autostart);
 
     GtkWidget *asnote = gtk_label_new("Installs a systemd --user service that runs the daemon "
-                                      "(with overlay) on login.");
+                                      "on login.");
     gtk_label_set_xalign(GTK_LABEL(asnote), 0.0);
     gtk_widget_add_css_class(asnote, "dim");
     gtk_box_append(GTK_BOX(page), asnote);
+
+    GtkWidget *overlay_cb = gtk_check_button_new_with_label("Show stroke trail overlay");
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(overlay_cb), overlay_is_enabled());
+    gtk_widget_set_margin_top(overlay_cb, 12);
+    gtk_box_append(GTK_BOX(page), overlay_cb);
+
+    GtkWidget *ovnote = gtk_label_new(on_gnome() ? "Not available on GNOME (no layer-shell support)."
+                                                 : "Draws the live trail while you stroke.");
+    gtk_label_set_xalign(GTK_LABEL(ovnote), 0.0);
+    gtk_widget_add_css_class(ovnote, "dim");
+    gtk_box_append(GTK_BOX(page), ovnote);
+    if (on_gnome())
+        gtk_widget_set_sensitive(overlay_cb, FALSE);
+    else
+        g_signal_connect(overlay_cb, "toggled", G_CALLBACK(on_overlay_toggled), s);
 
     // --- Page header: centered title + clickable dots, above the carousel ---
     PrefNav *nav = g_new0(PrefNav, 1);

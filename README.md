@@ -38,7 +38,8 @@ not, so on GNOME everything works *except* the on-screen trail.
   paginated preferences, a glass aesthetic, a History tab, and an in-window stroke
   recorder.
 - **System tray** — enable/disable, open preferences, quit (StatusNotifierItem).
-- **Autostart & live reload** — one toggle installs a systemd user service; saving
+- **Autostart & live reload** — one toggle installs a systemd user service (the overlay
+  has its own toggle, unavailable on GNOME); saving
   in the GUI applies instantly to the running daemon, no restart.
 
 ## Install
