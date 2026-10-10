@@ -122,7 +122,7 @@
 <div class="page-nav"><a href="index.html">Docs Home</a></div>
 <h1 id="weazystroke--build-install--packaging">WeazyStroke &ndash; Build, Install &amp; Packaging</h1>
 
-<p>This page covers building the four binaries, the dependency and sanitizer story, the install footprint, the device permissions the engine needs, the two systemd units, and the Arch package.</p>
+<p>This page covers building the four binaries, the dependency and sanitizer story, the install footprint, the device permissions the engine needs, the two systemd units, and the Arch, RPM and DEB packages.</p>
 
 <h2 id="table-of-contents">Table of Contents</h2>
 
@@ -236,16 +236,17 @@
 
 <h2 id="3-building">3. Building</h2>
 
-<p>A release build, then install:</p>
+<p>A release build, then install (the prefix puts the binaries in <code>/usr/bin</code> and the udev rule in <code>/usr/lib/udev/rules.d</code>; without it everything lands under <code>/usr/local</code>):</p>
 
 <pre><code class="language-sh code-block">
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build
 sudo cmake --install build
 </code></pre>
 
 
-<p>A development build is just the defaults — <code>Debug</code> with sanitizers on (drop the two flags). The repo also ships <code>reinstall.sh</code>, which builds a separate <code>build-release</code> tree (Release, no ASan — <em>not</em> the dev <code>build/</code>), installs it to <code>/usr</code>, and restarts the user service so the freshly installed daemon and overlay take effect:</p>
+<p>A development build is just the defaults — <code>Debug</code> with sanitizers on (drop the two flags). The repo also ships <code>reinstall.sh</code>, which builds a separate <code>build-release</code> tree (Release, no ASan — <em>not</em> the dev <code>build/</code>), installs it with the default prefix (<code>/usr/local</code>), and restarts the user service so the freshly installed daemon and overlay take effect:</p>
 
 <pre><code class="language-sh code-block">
 ./reinstall.sh        # build-release -&gt; sudo install -&gt; systemctl --user restart weazystroke.service
@@ -339,11 +340,15 @@ ctest --test-dir build
 <td> <code>weazystroke.desktop</code> (launcher, <code>Exec=eswl-config</code>) </td>
 <td> <code>share/applications/</code> </td>
 </tr>
+<tr>
+<td> <code>99-easystroke-wayland.rules</code> (udev rule) </td>
+<td> <code>lib/udev/rules.d/</code> </td>
+</tr>
 </tbody>
 </table>
 
 
-<p>The udev rule is <strong>not</strong> installed by CMake — the Arch package installs it, and a from-source install copies it by hand (below). The autostart systemd <code>--user</code> service is not installed either; the GUI&rsquo;s &ldquo;Start on login&rdquo; toggle writes it on demand.</p>
+<p>The autostart systemd <code>--user</code> service is not installed; the GUI&rsquo;s &ldquo;Start on login&rdquo; toggle writes it on demand.</p>
 
 <h2 id="7-device-permissions">7. Device permissions</h2>
 
@@ -355,10 +360,9 @@ KERNEL=="uinput", SUBSYSTEM=="misc",  GROUP="input", MODE="0660", OPTIONS+="stat
 </code></pre>
 
 
-<p>From a source build, install it and join the group:</p>
+<p>The packages and <code>cmake --install</code> already place the rule; reload udev and join the group:</p>
 
 <pre><code class="language-sh code-block">
-sudo cp packaging/99-easystroke-wayland.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger
 sudo usermod -aG input "$USER"        # then re-login
 </code></pre>
@@ -370,7 +374,7 @@ sudo usermod -aG input "$USER"        # then re-login
 
 <p>There are two units, for two different roles — do not confuse them.</p>
 
-<p><strong>The autostart user service</strong> is the one most people use. The GUI&rsquo;s &ldquo;Start on login&rdquo; toggle writes <code>~/.config/systemd/user/weazystroke.service</code>, whose <code>ExecStart</code> is the daemon with <code>--overlay --tray</code>, and enables it with <code>systemctl --user enable --now</code>. It runs in your graphical session, picks up your <code>input</code>-group membership, and brings up the engine, trail, and tray together. See <a href="config-gui.gen.html">Config GUI &amp; Tray</a>.</p>
+<p><strong>The autostart user service</strong> is the one most people use. The GUI&rsquo;s &ldquo;Start on login&rdquo; toggle writes <code>~/.config/systemd/user/weazystroke.service</code>, whose <code>ExecStart</code> is the daemon with <code>--tray</code> (plus <code>--overlay</code> if the overlay checkbox is on), and enables it with <code>systemctl --user enable --now</code>. It runs in your graphical session, picks up your <code>input</code>-group membership, and brings up the engine, tray, and optionally the trail. See <a href="config-gui.gen.html">Config GUI &amp; Tray</a>.</p>
 
 <p><strong>The system service template</strong> (<code>packaging/easystroke-wayland.service</code>) is a starting point for the future &ldquo;small privileged daemon&rdquo; model, where the engine has device capabilities and the GUI talks to it over IPC. It is hardened — <code>NoNewPrivileges</code>, <code>ProtectSystem=strict</code>, <code>ProtectHome=read-only</code>, <code>PrivateTmp</code>, and scoped <code>DeviceAllow</code> for <code>/dev/uinput</code> and <code>char-input</code> — and is provided as a reference, not wired up by the install.</p>
 
@@ -383,7 +387,16 @@ cd packaging &amp;&amp; makepkg -si
 </code></pre>
 
 
-<p>It configures a Release, no-ASan build with <code>-DCMAKE_INSTALL_PREFIX=/usr</code>, runs the CMake install (the four binaries, icon, and launcher), and additionally installs the udev rule to <code>/usr/lib/udev/rules.d/99-easystroke-wayland.rules</code>. Its <code>depends</code> array is the runtime set — <code>libinput</code>, <code>libevdev</code>, <code>libxkbcommon</code>, <code>gtk4</code>, <code>gtk4-layer-shell</code>, <code>libadwaita</code>, <code>glib2</code>, <code>systemd-libs</code> — and <code>pkgver()</code> derives a version from the git revision count and short hash.</p>
+<p>It configures a Release, no-ASan build with <code>-DCMAKE_INSTALL_PREFIX=/usr</code> and runs the CMake install (the four binaries, icon, launcher and udev rule). Its <code>depends</code> array is the runtime set — <code>libinput</code>, <code>libevdev</code>, <code>libxkbcommon</code>, <code>gtk4</code>, <code>gtk4-layer-shell</code>, <code>libadwaita</code>, <code>glib2</code>, <code>systemd-libs</code> — and <code>pkgver()</code> derives a version from the git revision count and short hash.</p>
+
+<p>The RPM and DEB packages come from CPack (the <code>CPACK_*</code> block in <code>CMakeLists.txt</code>), run from a Release build:</p>
+
+<pre><code class="language-sh code-block">
+cd build &amp;&amp; cpack -G RPM      # or: cpack -G DEB
+</code></pre>
+
+
+<p>CPack derives the runtime dependencies from the binaries (<code>rpmbuild</code> for RPM, <code>dpkg-shlibdeps</code> from <code>dpkg-dev</code> for DEB), so there is no hand-written list. The <code>.github/workflows/release.yml</code> workflow runs this on every <code>v*</code> tag: it builds, runs <code>ctest</code>, and packages <code>.deb</code> (in a <code>debian:trixie</code> container) and <code>.rpm</code> (in <code>fedora:latest</code>) for x86_64 and arm64, then attaches all four files to a GitHub release. Packages inherit the build distribution&rsquo;s library versions, so the <code>.deb</code> targets Debian 13 and newer.</p>
 
 <blockquote><p><strong>GNOME note.</strong> On GNOME everything works <em>except</em> the live trail: Mutter does not implement <code>wlr-layer-shell</code>, so the overlay window cannot be a click-through always-on-top surface. The engine, GUI, and actions are unaffected. The overlay already sits behind a swappable process + line-protocol interface, so a GNOME Shell-extension backend over DBus could restore the trail with no engine changes — see <a href="overlay.gen.html">Stroke-Trail Overlay</a>.</p></blockquote>
 

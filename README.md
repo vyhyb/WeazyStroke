@@ -44,26 +44,56 @@ not, so on GNOME everything works *except* the on-screen trail.
 
 ## Install
 
+### Prebuilt packages
+
+Download the latest `.rpm` or `.deb` (x86_64 and arm64) from the
+[Releases page](https://github.com/vyhyb/WeazyStroke/releases/latest):
+
+```sh
+sudo dnf install ./weazystroke-*.rpm     # Fedora
+sudo apt install ./weazystroke_*.deb     # Debian 13+ / Ubuntu 25.04+
+```
+
+The packages install the four binaries, the launcher, the icon and the udev rule.
+Then apply the rule and join the `input` group (see [Permissions](#permissions)).
+
 **Arch:**
 
 ```sh
 cd packaging && makepkg -si
 ```
 
-**From source:**
+### Build from source
+
+Build dependencies (`gtk4-layer-shell` is needed even on GNOME, the binaries link it):
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF
+# Fedora
+sudo dnf install cmake ninja-build gcc-c++ pkgconf-pkg-config libinput-devel \
+    systemd-devel libevdev-devel libxkbcommon-devel gtk4-devel libadwaita-devel \
+    gtk4-layer-shell-devel
+
+# Debian 13+ / Ubuntu 25.04+
+sudo apt install build-essential cmake ninja-build pkg-config libinput-dev \
+    libudev-dev libevdev-dev libxkbcommon-dev libgtk-4-dev libadwaita-1-dev \
+    libgtk4-layer-shell-dev
+```
+
+Build, test and install:
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build
+ctest --test-dir build --output-on-failure
 sudo cmake --install build
 ```
 
-Dependencies: `libinput`, `libevdev`, `libxkbcommon`, `gtk4`, `gtk4-layer-shell`,
-`libadwaita`, `glib2`, `systemd` (libudev); a C11/C++17 compiler, CMake ≥ 3.18.
-(Drop the `-DCMAKE_BUILD_TYPE`/`-DENABLE_ASAN` flags for a sanitized dev build;
-run the tests with `ctest --test-dir build`.)
+For a development build, drop the `-DCMAKE_BUILD_TYPE`/`-DENABLE_ASAN` flags
+(Debug with sanitizers). To build a package instead of installing, run
+`cpack -G RPM` or `cpack -G DEB` inside `build/`.
 
-Installs four binaries: `eswl-daemon` (engine), `eswl-overlay` (trail renderer),
+The four binaries are `eswl-daemon` (engine), `eswl-overlay` (trail renderer),
 `eswl-config` (GUI), `eswl-tray` (tray).
 
 ## Usage
@@ -82,11 +112,10 @@ Triggers, the trail, colors, pressure, and touch are all tunable in
 ## Permissions
 
 The engine needs read-write access to `/dev/input/event*` (libinput) and
-`/dev/uinput` (action injection). The Arch package installs the udev rule; from
-source, install it and join the `input` group:
+`/dev/uinput` (action injection). The packages and `cmake --install` install the
+udev rule; apply it and join the `input` group:
 
 ```sh
-sudo cp packaging/99-easystroke-wayland.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 sudo usermod -aG input "$USER"        # then re-login
 ```

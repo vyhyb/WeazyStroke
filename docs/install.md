@@ -1,6 +1,6 @@
 # WeazyStroke -- Build, Install & Packaging
 
-This page covers building the four binaries, the dependency and sanitizer story, the install footprint, the device permissions the engine needs, the two systemd units, and the Arch package.
+This page covers building the four binaries, the dependency and sanitizer story, the install footprint, the device permissions the engine needs, the two systemd units, and the Arch, RPM and DEB packages.
 
 ## Table of Contents
 
@@ -86,15 +86,16 @@ One static library, `eswl_core`, holds the recognition core and every engine sub
 
 ## 3. Building
 
-A release build, then install:
+A release build, then install (the prefix puts the binaries in `/usr/bin` and the udev rule in `/usr/lib/udev/rules.d`; without it everything lands under `/usr/local`):
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_ASAN=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build
 sudo cmake --install build
 ```
 
-A development build is just the defaults — `Debug` with sanitizers on (drop the two flags). The repo also ships `reinstall.sh`, which builds a separate `build-release` tree (Release, no ASan — *not* the dev `build/`), installs it to `/usr`, and restarts the user service so the freshly installed daemon and overlay take effect:
+A development build is just the defaults — `Debug` with sanitizers on (drop the two flags). The repo also ships `reinstall.sh`, which builds a separate `build-release` tree (Release, no ASan — *not* the dev `build/`), installs it with the default prefix (`/usr/local`), and restarts the user service so the freshly installed daemon and overlay take effect:
 
 ```sh
 ./reinstall.sh        # build-release -> sudo install -> systemctl --user restart weazystroke.service
@@ -138,8 +139,9 @@ The gates and recognition are pure logic, so the suite verifies the trickiest be
 | `eswl-daemon`, `eswl-overlay`, `eswl-config`, `eswl-tray` | `bin/` |
 | `weazystroke.svg` (app icon) | `share/icons/hicolor/scalable/apps/` |
 | `weazystroke.desktop` (launcher, `Exec=eswl-config`) | `share/applications/` |
+| `99-easystroke-wayland.rules` (udev rule) | `lib/udev/rules.d/` |
 
-The udev rule is **not** installed by CMake — the Arch package installs it, and a from-source install copies it by hand (below). The autostart systemd `--user` service is not installed either; the GUI's "Start on login" toggle writes it on demand.
+The autostart systemd `--user` service is not installed; the GUI's "Start on login" toggle writes it on demand.
 
 ## 7. Device permissions
 
@@ -150,10 +152,9 @@ KERNEL=="event*", SUBSYSTEM=="input", GROUP="input", MODE="0640"
 KERNEL=="uinput", SUBSYSTEM=="misc",  GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
 ```
 
-From a source build, install it and join the group:
+The packages and `cmake --install` already place the rule; reload udev and join the group:
 
 ```sh
-sudo cp packaging/99-easystroke-wayland.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 sudo usermod -aG input "$USER"        # then re-login
 ```
@@ -176,6 +177,14 @@ The Arch package (`packaging/PKGBUILD`, `weazystroke-git`) builds straight from 
 cd packaging && makepkg -si
 ```
 
-It configures a Release, no-ASan build with `-DCMAKE_INSTALL_PREFIX=/usr`, runs the CMake install (the four binaries, icon, and launcher), and additionally installs the udev rule to `/usr/lib/udev/rules.d/99-easystroke-wayland.rules`. Its `depends` array is the runtime set — `libinput`, `libevdev`, `libxkbcommon`, `gtk4`, `gtk4-layer-shell`, `libadwaita`, `glib2`, `systemd-libs` — and `pkgver()` derives a version from the git revision count and short hash.
+It configures a Release, no-ASan build with `-DCMAKE_INSTALL_PREFIX=/usr` and runs the CMake install (the four binaries, icon, launcher and udev rule). Its `depends` array is the runtime set — `libinput`, `libevdev`, `libxkbcommon`, `gtk4`, `gtk4-layer-shell`, `libadwaita`, `glib2`, `systemd-libs` — and `pkgver()` derives a version from the git revision count and short hash.
+
+The RPM and DEB packages come from CPack (the `CPACK_*` block in `CMakeLists.txt`), run from a Release build:
+
+```sh
+cd build && cpack -G RPM      # or: cpack -G DEB
+```
+
+CPack derives the runtime dependencies from the binaries (`rpmbuild` for RPM, `dpkg-shlibdeps` from `dpkg-dev` for DEB), so there is no hand-written list. The `.github/workflows/release.yml` workflow runs this on every `v*` tag: it builds, runs `ctest`, and packages `.deb` (in a `debian:trixie` container) and `.rpm` (in `fedora:latest`) for x86_64 and arm64, then attaches all four files to a GitHub release. Packages inherit the build distribution's library versions, so the `.deb` targets Debian 13 and newer.
 
 > **GNOME note.** On GNOME everything works *except* the live trail: Mutter does not implement `wlr-layer-shell`, so the overlay window cannot be a click-through always-on-top surface. The engine, GUI, and actions are unaffected. The overlay already sits behind a swappable process + line-protocol interface, so a GNOME Shell-extension backend over DBus could restore the trail with no engine changes — see [Stroke-Trail Overlay](overlay.gen.html).
