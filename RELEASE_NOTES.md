@@ -16,7 +16,7 @@ First packaged release of the WeazyStroke fork, software originally created by n
 ### Desktop support
 
 - **KDE and other layer-shell compositors:** everything works, including the overlay.
-- **GNOME:** the engine, GUI and actions work. Mutter has no layer-shell, so the trail overlay is unavailable and its checkbox is greyed out.
+- **GNOME:** the engine, GUI and actions work. Mutter has no layer-shell, so the trail overlay is unavailable and its checkbox is greyed out. However, the trace can be substituted using the GNOME shell extension [WeazyStroke GNOME Tail](https://extensions.gnome.org/extension/11177/weazystroke-gnome-tail/)
 - Start on login and the trail overlay are separate toggles on the third Preferences page.
 
 ### Packages
