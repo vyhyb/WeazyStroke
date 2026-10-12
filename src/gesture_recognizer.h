@@ -39,7 +39,16 @@ public:
     void clear_bindings() { bindings_.clear(); }
     void set_threshold(double t) { threshold_ = t; }
     // Change the trigger button live (e.g. on config reload).
-    void set_trigger(Button b) { trigger_ = b; }
+    void set_trigger(Button b) {
+        if (recording_) {
+            recording_ = false;
+            pending_end_ = false;
+            notify_stroke(false);
+            if (overlay_)
+                overlay_->end();
+        }
+        trigger_ = b;
+    }
     // Modifiers that must be held when the trigger is pressed (mouse mode).
     void set_required_modifiers(unsigned m) { required_mods_ = m; }
     // A second button that must be held for the trigger to start a gesture, and
@@ -66,6 +75,9 @@ public:
     void set_reporter(std::function<void(const Recognition &)> reporter) {
         reporter_ = std::move(reporter);
     }
+
+    // Optional stroke-state listener (true = stroke begins, false = ends/cancelled).
+    void set_stroke_listener(std::function<void(bool)> cb) { stroke_listener_ = std::move(cb); }
 
     // Optional live trail renderer; nullptr (default) draws nothing.
     void set_overlay(TraceOverlay *overlay) { overlay_ = overlay; }
@@ -110,6 +122,11 @@ private:
     double touch_travel_ = 0.0;
     std::vector<GestureBinding> bindings_;
     std::function<void(const Recognition &)> reporter_;
+    std::function<void(bool)> stroke_listener_;
+    void notify_stroke(bool on) {
+        if (stroke_listener_)
+            stroke_listener_(on);
+    }
     TraceOverlay *overlay_ = nullptr;
 };
 

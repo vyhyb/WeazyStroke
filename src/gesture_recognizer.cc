@@ -43,6 +43,7 @@ void GestureRecognizer::on_button(Button button, bool pressed, Sample at) {
         samples_.push_back(at);
         origin_ = {at.x, at.y};
         max_travel_ = 0.0;
+        notify_stroke(true);
         if (overlay_) {
             overlay_->begin();
             overlay_->add(at.x, at.y, at.pressure);
@@ -69,6 +70,7 @@ void GestureRecognizer::tick(uint32_t now_ms) {
 void GestureRecognizer::finalize() {
     recording_ = false;
     pending_end_ = false;
+    notify_stroke(false);
     if (overlay_)
         overlay_->end();
     run_stroke(samples_, max_travel_);
@@ -112,6 +114,7 @@ void GestureRecognizer::on_touch_down(int slot, Sample at) {
         touch_samples_.push_back(at);
         touch_origin_ = {at.x, at.y};
         touch_travel_ = 0.0;
+        notify_stroke(true);
         if (overlay_) {
             overlay_->begin();
             overlay_->add(at.x, at.y, at.pressure);
@@ -141,12 +144,14 @@ void GestureRecognizer::on_touch_motion(int slot, Sample at) {
 void GestureRecognizer::on_touch_up(int slot, Sample) {
     switch (touch_.on_up(slot)) {
     case TouchGate::Up::Finalize: // draw finger up; anchor still held -> keep cue
+        notify_stroke(false);
         if (overlay_)
             overlay_->end();
         run_stroke(touch_samples_, touch_travel_);
         touch_samples_.clear();
         break;
     case TouchGate::Up::Cancel: // anchor lifted mid-stroke -> drop trail + cue
+        notify_stroke(false);
         if (overlay_) {
             overlay_->end();
             overlay_->anchor_hide();
