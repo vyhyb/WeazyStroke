@@ -9,3 +9,6 @@ compile_commands.json
 # core dumps
 core
 core.*
+
+# temporary files
+_dev*
