@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(easystroke-wayland LANGUAGES C CXX)
+project(easystroke-wayland VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -115,7 +115,7 @@ install(FILES packaging/99-easystroke-wayland.rules DESTINATION lib/udev/rules.d
 
 # Packaging: `cpack -G DEB` / `cpack -G RPM` from a Release (-DENABLE_ASAN=OFF) build.
 set(CPACK_PACKAGE_NAME weazystroke)
-set(CPACK_PACKAGE_VERSION 0.1.0)
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "vyhyb <https://github.com/vyhyb/WeazyStroke>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Mouse and stylus gesture recognition for Wayland")
 set(CPACK_PACKAGING_INSTALL_PREFIX /usr)
