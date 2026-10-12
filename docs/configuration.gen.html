@@ -456,7 +456,7 @@
 </table>
 
 
-<p>The two helper modes are how the GUI talks to the engine without a socket: it shells out to <code>eswl-daemon --capture-trigger</code> for trigger learn-mode and reads the result from stdout, and the headless <code>--record</code> mirrors the GUI&rsquo;s in-window recorder. The autostart service runs <code>eswl-daemon --overlay --tray</code> so login brings up the engine, trail, and tray together. See <a href="install.gen.html">Build, Install &amp; Packaging</a> for the service and the device permissions these flags assume.</p>
+<p>The two helper modes are how the GUI talks to the engine without a socket: it shells out to <code>eswl-daemon --capture-trigger</code> for trigger learn-mode and reads the result from stdout, and the headless <code>--record</code> mirrors the GUI&rsquo;s in-window recorder. The autostart service runs <code>eswl-daemon --grab --tray</code> (plus <code>--overlay</code> when enabled) so login brings up the engine, tray, and optionally the trail, with the trigger button suppressed for gestures. See <a href="install.gen.html">Build, Install &amp; Packaging</a> for the service and the device permissions these flags assume.</p>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {

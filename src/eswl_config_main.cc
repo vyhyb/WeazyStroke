@@ -1127,13 +1127,13 @@ bool on_gnome() {
     const char *d = std::getenv("XDG_CURRENT_DESKTOP");
     return d && std::strstr(d, "GNOME");
 }
-// The overlay choice lives in the unit's ExecStart; with no unit yet it defaults to on.
+// The overlay choice lives in the unit's ExecStart; with no unit yet it defaults to off.
 bool overlay_is_enabled() {
     if (on_gnome())
         return false;
     std::ifstream in(service_file_path());
     if (!in)
-        return true;
+        return false;
     std::stringstream ss;
     ss << in.rdbuf();
     return ss.str().find(" --overlay") != std::string::npos;
@@ -1145,7 +1145,7 @@ void write_service_file(bool overlay) {
     std::ofstream o(service_file_path(), std::ios::trunc);
     o << "[Unit]\nDescription=WeazyStroke gesture daemon\n"
       << "PartOf=graphical-session.target\nAfter=graphical-session.target\n\n"
-      << "[Service]\nType=simple\nExecStart=" << daemon_exe_path() << (overlay ? " --overlay" : "")
+      << "[Service]\nType=simple\nExecStart=" << daemon_exe_path() << " --grab" << (overlay ? " --overlay" : "")
       << " --tray\n"
       << "Restart=on-failure\nRestartSec=2\n\n"
       << "[Install]\nWantedBy=graphical-session.target\n";

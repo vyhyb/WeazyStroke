@@ -125,7 +125,7 @@ If your trigger isn't a preset, **"Set…"** runs a learn-mode: it spawns `eswl-
 
 ## 6. Autostart and live apply
 
-**Start on login** installs a systemd `--user` service at `~/.config/systemd/user/weazystroke.service`. The unit's `ExecStart` is the resolved daemon path with `--tray`, plus `--overlay` when **Show stroke trail overlay** is checked, so login brings up the engine, the tray, and (optionally) the trail:
+**Start on login** installs a systemd `--user` service at `~/.config/systemd/user/weazystroke.service`. The unit's `ExecStart` is the resolved daemon path with `--grab --tray`, plus `--overlay` when **Show stroke trail overlay** is checked, so login brings up the engine (with the trigger click suppressed for gestures), the tray, and (optionally) the trail:
 
 ```ini
 [Unit]
@@ -135,7 +135,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=<.../eswl-daemon> [--overlay] --tray
+ExecStart=<.../eswl-daemon> --grab [--overlay] --tray
 Restart=on-failure
 RestartSec=2
 
@@ -145,7 +145,7 @@ WantedBy=graphical-session.target
 
 Toggling the checkbox writes (or removes) this file and runs `systemctl --user daemon-reload` then `enable --now` / `disable --now`.
 
-The overlay checkbox is independent of autostart: toggling it rewrites the unit with or without `--overlay`, reloads systemd, and runs `try-restart` so a running service picks it up. The choice is read back from the unit, and defaults to on when no unit exists. On GNOME (`XDG_CURRENT_DESKTOP` contains `GNOME`) the compositor has no layer-shell, so the checkbox is greyed out and the unit never gets `--overlay`.
+The overlay checkbox is independent of autostart: toggling it rewrites the unit with or without `--overlay`, reloads systemd, and runs `try-restart` so a running service picks it up. The choice is read back from the unit, and defaults to off when no unit exists. On GNOME (`XDG_CURRENT_DESKTOP` contains `GNOME`) the compositor has no layer-shell, so the checkbox is greyed out and the unit never gets `--overlay`.
 
 **Live apply.** The GUI never restarts the daemon to apply edits. **Save** writes `gestures.json` and raises `SIGHUP` (`pkill -HUP -x eswl-daemon`); the running daemon reloads and rebuilds its bindings in place. **Pause/Resume** raises `SIGUSR1` to toggle the enabled state. Both are fire-and-forget signals to whatever daemon is running — there is no socket between the GUI and the engine, only the shared config file and these signals.
 
