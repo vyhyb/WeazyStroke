@@ -51,7 +51,7 @@ target_include_directories(eswl_core PUBLIC src)
 target_link_libraries(eswl_core PUBLIC PkgConfig::INPUT PkgConfig::XKB)
 
 add_executable(eswl-daemon src/main.cc)
-target_link_libraries(eswl-daemon PRIVATE eswl_core)
+target_link_libraries(eswl-daemon PRIVATE eswl_core PkgConfig::GIO)
 
 # Standalone trail renderer. Talks to the daemon over a pipe; kept out of the
 # warnings/ASan loops below since it is mostly GTK glue (GTK headers are noisy

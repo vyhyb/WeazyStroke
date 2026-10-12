@@ -10,6 +10,7 @@
 #include "keymap.h"
 #include "libinput_source.h"
 #include "process.h"
+#include "stroke_signal.h"
 #include "touch_evdev_source.h"
 #include "process_overlay.h"
 #include "process_tray.h"
@@ -552,6 +553,9 @@ int main(int argc, char **argv) {
 
     InputInjector *inj = injector.get();
     build_bindings(recognizer, cfg, inj, keymap);
+
+    auto stroke_signal = std::make_unique<StrokeSignal>();
+    recognizer.set_stroke_listener([s = stroke_signal.get()](bool on) { s->set_active(on); });
 
     std::unique_ptr<ProcessOverlay> overlay_proc;
     if (overlay) {

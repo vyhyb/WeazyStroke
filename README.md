@@ -125,9 +125,11 @@ sudo usermod -aG input "$USER"        # then re-login
 The engine, GUI, and actions work on GNOME, but Mutter does not implement
 `wlr-layer-shell`, so the daemon's live overlay cannot draw its trail there.
 The companion [WeazyStroke GNOME Tail extension](https://github.com/vyhyb/weazystroke-gnome-tail)
-draws the trail on the GNOME Shell stage instead. It reads the trigger from the
-WeazyStroke config and reports config detection in its preferences; install and
-enable it separately from the daemon.
+draws the trail on the GNOME Shell stage instead. When WeazyStroke runs with
+`--grab` (to suppress the trigger click from applications), the daemon publishes
+a `StrokeActive` signal on the session D-Bus (`org.weazystroke.Daemon`), allowing
+the extension to activate the trail while Mutter coordinates track pointer motion.
+Install and enable it separately from the daemon.
 
 ## License
 
