@@ -11,4 +11,4 @@ core
 core.*
 
 # temporary files
-_dev*
+_temp*
