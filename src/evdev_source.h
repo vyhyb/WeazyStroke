@@ -9,6 +9,8 @@
 #include <vector>
 
 struct libevdev;
+struct udev;
+struct udev_monitor;
 
 namespace es {
 
@@ -32,7 +34,7 @@ public:
     EvdevSource(const EvdevSource &) = delete;
     EvdevSource &operator=(const EvdevSource &) = delete;
 
-    int fd() const override; // epoll fd aggregating all grabbed devices
+    int fd() const override; // epoll fd aggregating grabbed devices and hotplug
     void dispatch() override;
 
     size_t device_count() const { return devices_.size(); }
@@ -45,9 +47,11 @@ private:
     };
 
     void scan_and_grab();
+    void handle_hotplug();
     void try_add(const std::string &path);
     bool looks_like_mouse(libevdev *ev) const;
-    void read_device(Device &d);
+    bool read_device(Device &d);
+    void remove_device(Device &d);
     void process_button(uint16_t code, int value, uint32_t time_ms);
     void flush_frame(uint32_t time_ms);
     void clamp_position();
@@ -59,6 +63,8 @@ private:
     int screen_w_;
     int screen_h_;
     int epoll_fd_ = -1;
+    udev *udev_ = nullptr;
+    udev_monitor *monitor_ = nullptr; // announces mice plugged in after startup
     std::vector<std::unique_ptr<Device>> devices_;
 
     Point pos_;

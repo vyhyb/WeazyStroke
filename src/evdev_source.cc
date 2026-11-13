@@ -5,6 +5,7 @@
 #include "uinput_injector.h"
 
 #include <libevdev/libevdev.h>
+#include <libudev.h>
 
 #include <fcntl.h>
 #include <sys/epoll.h>
@@ -13,6 +14,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <dirent.h>
 #include <stdexcept>
@@ -44,13 +46,33 @@ EvdevSource::EvdevSource(InputSink &sink, InputInjector &injector, Button trigge
     if (epoll_fd_ < 0)
         throw std::runtime_error("epoll_create1 failed");
 
+    // Watch before scanning so a mouse appearing in between is not missed.
+    udev_ = udev_new();
+    if (udev_)
+        monitor_ = udev_monitor_new_from_netlink(udev_, "udev");
+    if (monitor_ && udev_monitor_filter_add_match_subsystem_devtype(monitor_, "input", nullptr) == 0 &&
+        udev_monitor_enable_receiving(monitor_) == 0) {
+        epoll_event ee;
+        std::memset(&ee, 0, sizeof(ee));
+        ee.events = EPOLLIN;
+        ee.data.ptr = nullptr; // nullptr marks the monitor; devices carry their Device*
+        ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, udev_monitor_get_fd(monitor_), &ee);
+    } else {
+        std::fprintf(stderr, "warning: udev monitor unavailable; mice plugged in later are "
+                             "not grabbed\n");
+    }
+
     scan_and_grab();
 
-    if (devices_.empty()) {
+    if (devices_.empty() && !monitor_) {
         ::close(epoll_fd_);
         epoll_fd_ = -1;
+        if (udev_)
+            udev_unref(udev_);
         throw std::runtime_error("no grabbable mouse devices found");
     }
+    if (devices_.empty())
+        std::printf("no mouse found yet; waiting for one to be plugged in.\n");
 }
 
 EvdevSource::~EvdevSource() {
@@ -62,6 +84,10 @@ EvdevSource::~EvdevSource() {
         if (d->fd >= 0)
             ::close(d->fd);
     }
+    if (monitor_)
+        udev_monitor_unref(monitor_);
+    if (udev_)
+        udev_unref(udev_);
     if (epoll_fd_ >= 0)
         ::close(epoll_fd_);
 }
@@ -117,7 +143,17 @@ void EvdevSource::try_add(const std::string &path) {
         ::close(fd);
         return;
     }
+    std::printf("[device] grabbed '%s'\n", dev->name.c_str());
     devices_.push_back(std::move(dev));
+}
+
+void EvdevSource::remove_device(Device &d) {
+    std::printf("[device] released '%s'\n", d.name.c_str());
+    ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, d.fd, nullptr);
+    libevdev_free(d.evdev);
+    ::close(d.fd);
+    devices_.erase(std::find_if(devices_.begin(), devices_.end(),
+                                [&d](const std::unique_ptr<Device> &p) { return p.get() == &d; }));
 }
 
 void EvdevSource::scan_and_grab() {
@@ -131,6 +167,18 @@ void EvdevSource::scan_and_grab() {
     ::closedir(dir);
 }
 
+void EvdevSource::handle_hotplug() {
+    udev_device *dev = udev_monitor_receive_device(monitor_);
+    if (!dev)
+        return;
+    const char *action = udev_device_get_action(dev);
+    const char *node = udev_device_get_devnode(dev);
+    if (action && node && std::strcmp(action, "add") == 0 &&
+        std::strncmp(node, "/dev/input/event", 16) == 0)
+        try_add(node);
+    udev_device_unref(dev);
+}
+
 void EvdevSource::clamp_position() {
     pos_.x = std::clamp(pos_.x, 0.0, static_cast<double>(screen_w_));
     pos_.y = std::clamp(pos_.y, 0.0, static_cast<double>(screen_h_));
@@ -139,11 +187,20 @@ void EvdevSource::clamp_position() {
 void EvdevSource::dispatch() {
     epoll_event events[16];
     int n = ::epoll_wait(epoll_fd_, events, 16, 0);
-    for (int i = 0; i < n; ++i)
-        read_device(*static_cast<Device *>(events[i].data.ptr));
+    for (int i = 0; i < n; ++i) {
+        if (!events[i].data.ptr) {
+            handle_hotplug();
+            continue;
+        }
+        Device &d = *static_cast<Device *>(events[i].data.ptr);
+        // A vanished device (unplug, resume, dock) stays readable forever; drop it.
+        if (!read_device(d) || (events[i].events & (EPOLLHUP | EPOLLERR)))
+            remove_device(d);
+    }
 }
 
-void EvdevSource::read_device(Device &d) {
+// Returns false once the device is gone (any error other than "no more events").
+bool EvdevSource::read_device(Device &d) {
     input_event ev;
     int rc = libevdev_next_event(d.evdev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
     while (rc == LIBEVDEV_READ_STATUS_SUCCESS || rc == LIBEVDEV_READ_STATUS_SYNC) {
@@ -184,6 +241,7 @@ void EvdevSource::read_device(Device &d) {
 
         rc = libevdev_next_event(d.evdev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
     }
+    return rc == -EAGAIN;
 }
 
 void EvdevSource::flush_frame(uint32_t time_ms) {
