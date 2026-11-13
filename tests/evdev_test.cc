@@ -1,6 +1,7 @@
-// Verifies EvdevSource device lifecycle with a virtual uinput mouse: a grabbed
-// mouse that disappears is dropped (instead of leaving a dead fd that keeps the
-// event loop spinning). Needs write access to /dev/uinput; skips otherwise.
+// Verifies EvdevSource device lifecycle with a virtual uinput mouse: a mouse
+// plugged in after startup is grabbed, and one that disappears is dropped
+// (instead of leaving a dead fd that keeps the event loop spinning). Needs
+// write access to /dev/uinput; skips otherwise.
 // Note: EvdevSource grabs every real mouse too, so they freeze while this runs.
 
 #include "evdev_source.h"
@@ -34,7 +35,7 @@ struct CountingSink final : InputSink {
     int motions = 0;
 };
 
-// Creates a minimal relative mouse with a right button; nullptr if uinput is unusable.
+// Creates a minimal relative mouse with a right button; nullptr on failure.
 libevdev_uinput *make_mouse() {
     int fd = ::open("/dev/uinput", O_RDWR | O_CLOEXEC);
     if (fd < 0)
@@ -72,18 +73,20 @@ template <typename Pred> bool pump_until(EvdevSource &src, Pred done) {
 }
 
 int main() {
-    libevdev_uinput *mouse = make_mouse();
-    if (!mouse) {
+    if (::access("/dev/uinput", W_OK) != 0) {
         std::printf("evdev_test: SKIP (no write access to /dev/uinput)\n");
         return 0;
     }
-    ::usleep(300 * 1000); // let udev apply the input-group permissions
 
     NullInjector inj;
     CountingSink sink;
     EvdevSource src(sink, inj, 3, 1920, 1080);
-    size_t with_mouse = src.device_count();
-    assert(with_mouse >= 1);
+    size_t before = src.device_count();
+
+    // A mouse plugged in after startup is picked up via hotplug.
+    libevdev_uinput *mouse = make_mouse();
+    assert(mouse);
+    assert(pump_until(src, [&] { return src.device_count() == before + 1; }));
 
     // Events from the grabbed virtual mouse reach the sink.
     libevdev_uinput_write_event(mouse, EV_REL, REL_X, 5);
@@ -92,7 +95,7 @@ int main() {
 
     // Unplugging it drops the device rather than leaving a dead fd behind.
     destroy_mouse(mouse);
-    assert(pump_until(src, [&] { return src.device_count() == with_mouse - 1; }));
+    assert(pump_until(src, [&] { return src.device_count() == before; }));
 
     std::printf("evdev_test: OK\n");
     return 0;
