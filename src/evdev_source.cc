@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <dirent.h>
 #include <stdexcept>
@@ -117,7 +118,17 @@ void EvdevSource::try_add(const std::string &path) {
         ::close(fd);
         return;
     }
+    std::printf("[device] grabbed '%s'\n", dev->name.c_str());
     devices_.push_back(std::move(dev));
+}
+
+void EvdevSource::remove_device(Device &d) {
+    std::printf("[device] released '%s'\n", d.name.c_str());
+    ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, d.fd, nullptr);
+    libevdev_free(d.evdev);
+    ::close(d.fd);
+    devices_.erase(std::find_if(devices_.begin(), devices_.end(),
+                                [&d](const std::unique_ptr<Device> &p) { return p.get() == &d; }));
 }
 
 void EvdevSource::scan_and_grab() {
@@ -139,11 +150,16 @@ void EvdevSource::clamp_position() {
 void EvdevSource::dispatch() {
     epoll_event events[16];
     int n = ::epoll_wait(epoll_fd_, events, 16, 0);
-    for (int i = 0; i < n; ++i)
-        read_device(*static_cast<Device *>(events[i].data.ptr));
+    for (int i = 0; i < n; ++i) {
+        Device &d = *static_cast<Device *>(events[i].data.ptr);
+        // A vanished device (unplug, resume, dock) stays readable forever; drop it.
+        if (!read_device(d) || (events[i].events & (EPOLLHUP | EPOLLERR)))
+            remove_device(d);
+    }
 }
 
-void EvdevSource::read_device(Device &d) {
+// Returns false once the device is gone (any error other than "no more events").
+bool EvdevSource::read_device(Device &d) {
     input_event ev;
     int rc = libevdev_next_event(d.evdev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
     while (rc == LIBEVDEV_READ_STATUS_SUCCESS || rc == LIBEVDEV_READ_STATUS_SYNC) {
@@ -184,6 +200,7 @@ void EvdevSource::read_device(Device &d) {
 
         rc = libevdev_next_event(d.evdev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
     }
+    return rc == -EAGAIN;
 }
 
 void EvdevSource::flush_frame(uint32_t time_ms) {

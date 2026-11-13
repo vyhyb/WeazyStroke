@@ -47,7 +47,8 @@ private:
     void scan_and_grab();
     void try_add(const std::string &path);
     bool looks_like_mouse(libevdev *ev) const;
-    void read_device(Device &d);
+    bool read_device(Device &d);
+    void remove_device(Device &d);
     void process_button(uint16_t code, int value, uint32_t time_ms);
     void flush_frame(uint32_t time_ms);
     void clamp_position();
