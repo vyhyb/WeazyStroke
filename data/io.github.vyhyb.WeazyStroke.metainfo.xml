@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.vyhyb.WeazyStroke</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>ISC</project_license>
+  <name>WeazyStroke</name>
+  <summary>Mouse and stylus gesture recognition for Wayland</summary>
+  <developer id="io.github.vyhyb">
+    <name>vyhyb</name>
+  </developer>
+  <description>
+    <p>
+      Draw a stroke with your mouse, pen, stylus or fingers and WeazyStroke runs
+      an action: launch a command, send a key combo, type text, click a button or
+      scroll.
+    </p>
+    <p>
+      Built on the recognition core of the classic easystroke and rebuilt for
+      Wayland. It works on any Wayland compositor; the live stroke trail needs
+      the layer-shell protocol or, on GNOME, a companion shell extension.
+    </p>
+  </description>
+  <launchable type="desktop-id">weazystroke.desktop</launchable>
+  <icon type="stock">weazystroke</icon>
+  <url type="homepage">https://github.com/vyhyb/WeazyStroke</url>
+  <url type="bugtracker">https://github.com/vyhyb/WeazyStroke/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The Actions table</caption>
+      <image>https://raw.githubusercontent.com/vyhyb/WeazyStroke/master/docs/screenshot.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Utility</category>
+    <category>Accessibility</category>
+  </categories>
+  <keywords>
+    <keyword>gesture</keyword>
+    <keyword>stylus</keyword>
+    <keyword>mouse</keyword>
+    <keyword>easystroke</keyword>
+  </keywords>
+  <supports>
+    <control>pointing</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.2.0" date="2026-10-12"/>
+    <release version="0.1.0" date="2026-10-10"/>
+  </releases>
+</component>

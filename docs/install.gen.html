@@ -341,6 +341,10 @@ ctest --test-dir build
 <td> <code>share/applications/</code> </td>
 </tr>
 <tr>
+<td> <code>io.github.vyhyb.WeazyStroke.metainfo.xml</code> (AppStream, lists the app in GNOME Software / KDE Discover) </td>
+<td> <code>share/metainfo/</code> </td>
+</tr>
+<tr>
 <td> <code>99-easystroke-wayland.rules</code> (udev rule) </td>
 <td> <code>lib/udev/rules.d/</code> </td>
 </tr>
@@ -387,7 +391,7 @@ cd packaging &amp;&amp; makepkg -si
 </code></pre>
 
 
-<p>It configures a Release, no-ASan build with <code>-DCMAKE_INSTALL_PREFIX=/usr</code> and runs the CMake install (the four binaries, icon, launcher and udev rule). Its <code>depends</code> array is the runtime set — <code>libinput</code>, <code>libevdev</code>, <code>libxkbcommon</code>, <code>gtk4</code>, <code>gtk4-layer-shell</code>, <code>libadwaita</code>, <code>glib2</code>, <code>systemd-libs</code> — and <code>pkgver()</code> derives a version from the git revision count and short hash.</p>
+<p>It configures a Release, no-ASan build with <code>-DCMAKE_INSTALL_PREFIX=/usr</code> and runs the CMake install (the four binaries, icon, launcher, AppStream metainfo and udev rule). Its <code>depends</code> array is the runtime set — <code>libinput</code>, <code>libevdev</code>, <code>libxkbcommon</code>, <code>gtk4</code>, <code>gtk4-layer-shell</code>, <code>libadwaita</code>, <code>glib2</code>, <code>systemd-libs</code> — and <code>pkgver()</code> derives a version from the git revision count and short hash.</p>
 
 <p>The RPM and DEB packages come from CPack (the <code>CPACK_*</code> block in <code>CMakeLists.txt</code>), run from a Release build:</p>
 
