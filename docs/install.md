@@ -139,6 +139,7 @@ The gates and recognition are pure logic, so the suite verifies the trickiest be
 | `eswl-daemon`, `eswl-overlay`, `eswl-config`, `eswl-tray` | `bin/` |
 | `weazystroke.svg` (app icon) | `share/icons/hicolor/scalable/apps/` |
 | `weazystroke.desktop` (launcher, `Exec=eswl-config`) | `share/applications/` |
+| `io.github.vyhyb.WeazyStroke.metainfo.xml` (AppStream, lists the app in GNOME Software / KDE Discover) | `share/metainfo/` |
 | `99-easystroke-wayland.rules` (udev rule) | `lib/udev/rules.d/` |
 
 The autostart systemd `--user` service is not installed; the GUI's "Start on login" toggle writes it on demand.
@@ -177,7 +178,7 @@ The Arch package (`packaging/PKGBUILD`, `weazystroke-git`) builds straight from 
 cd packaging && makepkg -si
 ```
 
-It configures a Release, no-ASan build with `-DCMAKE_INSTALL_PREFIX=/usr` and runs the CMake install (the four binaries, icon, launcher and udev rule). Its `depends` array is the runtime set — `libinput`, `libevdev`, `libxkbcommon`, `gtk4`, `gtk4-layer-shell`, `libadwaita`, `glib2`, `systemd-libs` — and `pkgver()` derives a version from the git revision count and short hash.
+It configures a Release, no-ASan build with `-DCMAKE_INSTALL_PREFIX=/usr` and runs the CMake install (the four binaries, icon, launcher, AppStream metainfo and udev rule). Its `depends` array is the runtime set — `libinput`, `libevdev`, `libxkbcommon`, `gtk4`, `gtk4-layer-shell`, `libadwaita`, `glib2`, `systemd-libs` — and `pkgver()` derives a version from the git revision count and short hash.
 
 The RPM and DEB packages come from CPack (the `CPACK_*` block in `CMakeLists.txt`), run from a Release build:
 

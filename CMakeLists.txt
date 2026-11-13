@@ -79,6 +79,12 @@ foreach(t ${ESWL_TESTS})
     list(APPEND ESWL_APP_TARGETS eswl_${t}_test)
 endforeach()
 
+find_program(APPSTREAMCLI appstreamcli)
+if(APPSTREAMCLI)
+    add_test(NAME metainfo COMMAND ${APPSTREAMCLI} validate --no-net
+             ${CMAKE_SOURCE_DIR}/data/io.github.vyhyb.WeazyStroke.metainfo.xml)
+endif()
+
 # Warnings on our own targets only (not the recycled C core or system libs).
 set(ESWL_WARNINGS -Wall -Wextra -Wpedantic)
 foreach(tgt ${ESWL_APP_TARGETS})
@@ -111,6 +117,7 @@ endif()
 install(TARGETS eswl-daemon eswl-overlay eswl-config eswl-tray DESTINATION bin/)
 install(FILES data/weazystroke.svg DESTINATION share/icons/hicolor/scalable/apps/)
 install(FILES data/weazystroke.desktop DESTINATION share/applications/)
+install(FILES data/io.github.vyhyb.WeazyStroke.metainfo.xml DESTINATION share/metainfo/)
 install(FILES packaging/99-easystroke-wayland.rules DESTINATION lib/udev/rules.d/)
 
 # Packaging: `cpack -G DEB` / `cpack -G RPM` from a Release (-DENABLE_ASAN=OFF) build.
@@ -125,7 +132,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 set(CPACK_RPM_PACKAGE_LICENSE ISC)
 # /usr/lib/udev/rules.d etc. are owned by systemd/filesystem; don't claim them.
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
-    /usr/lib/udev /usr/lib/udev/rules.d /usr/share/applications
+    /usr/lib/udev /usr/lib/udev/rules.d /usr/share/applications /usr/share/metainfo
     /usr/share/icons /usr/share/icons/hicolor
     /usr/share/icons/hicolor/scalable /usr/share/icons/hicolor/scalable/apps)
 include(CPack)
