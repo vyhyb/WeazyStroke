@@ -1,7 +1,7 @@
 // Verifies EvdevSource device lifecycle with a virtual uinput mouse: a mouse
 // plugged in after startup is grabbed, and one that disappears is dropped
 // (instead of leaving a dead fd that keeps the event loop spinning). Needs
-// write access to /dev/uinput; skips otherwise.
+// write access to /dev/uinput and no running daemon; skips otherwise.
 // Note: EvdevSource grabs every real mouse too, so they freeze while this runs.
 
 #include "evdev_source.h"
@@ -13,10 +13,13 @@
 
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 
 using namespace es;
 
@@ -62,6 +65,18 @@ void destroy_mouse(libevdev_uinput *ui) {
     ::close(fd);
 }
 
+// True if a daemon holds its single-instance lock (it would grab our mouse first).
+bool daemon_running() {
+    const char *rt = std::getenv("XDG_RUNTIME_DIR");
+    std::string path = std::string(rt && *rt ? rt : "/tmp") + "/weazystroke.lock";
+    int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd < 0)
+        return false;
+    bool held = ::flock(fd, LOCK_EX | LOCK_NB) != 0;
+    ::close(fd);
+    return held;
+}
+
 // Runs the source's event loop until `done` holds or ~3 s pass.
 template <typename Pred> bool pump_until(EvdevSource &src, Pred done) {
     for (int i = 0; i < 150 && !done(); ++i) {
@@ -75,6 +90,10 @@ template <typename Pred> bool pump_until(EvdevSource &src, Pred done) {
 int main() {
     if (::access("/dev/uinput", W_OK) != 0) {
         std::printf("evdev_test: SKIP (no write access to /dev/uinput)\n");
+        return 0;
+    }
+    if (daemon_running()) {
+        std::printf("evdev_test: SKIP (a WeazyStroke daemon is running)\n");
         return 0;
     }
 
